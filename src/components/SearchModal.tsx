@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+// タスク3: 検索モーダルのProps定義
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +19,7 @@ interface SearchModalProps {
   hasActiveFilter: boolean;
 }
 
+// タスク3: 検索モーダルコンポーネント
 export function SearchModal({
   isOpen,
   onClose,
@@ -25,19 +27,23 @@ export function SearchModal({
   onClearFilter,
   hasActiveFilter,
 }: SearchModalProps) {
+  // タスク3: モーダル内の検索入力状態
   const [searchInput, setSearchInput] = useState("");
 
+  // タスク3: 検索実行ハンドラー
   const handleSearch = useCallback(() => {
     onSearch(searchInput.trim());
     onClose();
   }, [searchInput, onSearch, onClose]);
 
+  // タスク3: フィルタクリアハンドラー
   const handleClearFilter = useCallback(() => {
     setSearchInput("");
     onClearFilter();
     onClose();
   }, [onClearFilter, onClose]);
 
+  // タスク3: Enterキー押下時の検索実行
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
@@ -75,15 +81,6 @@ export function SearchModal({
             <Button onClick={handleSearch} className="bg-[#E53935] hover:bg-[#D32F2F] text-white">
               検索
             </Button>
-            {hasActiveFilter && (
-              <Button
-                onClick={handleClearFilter}
-                variant="outline"
-                className="border-gray-300"
-              >
-                フィルタをクリア
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
+// タスク3: 検索機能の状態管理Context
 interface SearchContextType {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -11,8 +12,10 @@ interface SearchContextType {
   clearSearch: () => void;
 }
 
+// タスク3: SearchContext作成（初期値undefined）
 const SearchContext = createContext<SearchContextType | undefined>(undefined);
 
+// タスク3: SearchProviderコンポーネント
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,6 +42,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// タスク3: useSearchカスタムフック（Provider外での使用を防ぐ）
 export function useSearch() {
   const context = useContext(SearchContext);
   if (context === undefined) {

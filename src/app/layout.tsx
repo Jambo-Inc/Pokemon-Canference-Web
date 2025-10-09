@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { SearchProvider, useSearch } from "@/contexts/SearchContext";
 
+// タスク3: ヘッダーコンポーネント（useSearchフック使用のためクライアントコンポーネント）
 function Header() {
+  // タスク3: SearchContextから検索モーダル開閉関数を取得
   const { openModal } = useSearch();
 
   return (
@@ -34,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="description" content="PokéAPI sample with Next.js App Router" />
       </head>
       <body className="min-h-dvh bg-gray-50 text-gray-900">
+        {/* タスク3: SearchProviderでアプリ全体をラップ */}
         <SearchProvider>
           <Header />
           <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>

@@ -16,13 +16,15 @@ export function ModernPokedex() {
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetailWithJapanese | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  // タスク2: 追加読み込みローディング状態管理
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // タスク3: 日本語名キャッシュ用のMap
   const [pokemonNameCache, setPokemonNameCache] = useState<Map<string, string>>(new Map());
 
-  // SearchContextから検索状態を取得
+  // タスク3: SearchContextから検索状態を取得
   const { searchQuery, setSearchQuery, isModalOpen, closeModal, clearSearch } = useSearch();
 
-  // フィルタリング処理
+  // タスク3: フィルタリング処理
   const filteredPokemon = useMemo(() => {
     if (!searchQuery.trim()) {
       return pokemonList?.results || [];
@@ -87,7 +89,7 @@ export function ModernPokedex() {
     initialize();
   }, [handlePokemonSelect]);
 
-  // 日本語名キャッシュ構築
+  // タスク3: 日本語名キャッシュ構築
   useEffect(() => {
     const fetchJapaneseNames = async () => {
       if (!pokemonList?.results) return;
@@ -109,7 +111,7 @@ export function ModernPokedex() {
     fetchJapaneseNames();
   }, [pokemonList, pokemonNameCache]);
 
-  // もっと見るボタンの処理
+  // タスク2: もっと見るボタンの処理
   const loadMorePokemon = async () => {
     if (!pokemonList) return;
 
@@ -134,19 +136,19 @@ export function ModernPokedex() {
     }
   };
 
-  // 検索ハンドラー
+  // タスク3: 検索ハンドラー
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, [setSearchQuery]);
 
-  // フィルタクリアハンドラー
+  // タスク3: フィルタクリアハンドラー
   const handleClearFilter = useCallback(() => {
     clearSearch();
   }, [clearSearch]);
 
   return (
     <>
-      {/* 検索モーダル */}
+      {/* タスク3: 検索モーダル */}
       <SearchModal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -178,9 +180,24 @@ export function ModernPokedex() {
         <div className="h-1/2 bg-white flex flex-col">
           <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <p className="text-gray-700">
-                {filteredPokemon.length}匹のポケモン
-              </p>
+              {/* タスク3: 検索結果表示とクリアボタン */}
+              {searchQuery ? (
+                <div className='flex items-center gap-2'>
+                  <p className="text-gray-700">
+                    「{searchQuery}」の検索結果: {filteredPokemon.length}匹のポケモン
+                  </p>
+                  <button
+                    onClick={handleClearFilter}
+                    className="text-gray-500 text-sm hover:text-white transition-colors flex items-center gap-1 bg-gray-100 hover:bg-gray-500 px-2 py-1 rounded-md"
+                  >
+                    × クリア
+                  </button>
+                </div>
+              ) : (
+                  <p className="text-gray-700">
+                    {filteredPokemon.length}匹のポケモン
+                  </p>
+              )}
               <span className="text-gray-500 text-sm">音順</span>
             </div>
           </div>
@@ -192,6 +209,7 @@ export function ModernPokedex() {
                   <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
                 </div>
               ) : filteredPokemon.length === 0 && searchQuery ? (
+                // タスク3: 検索結果0件表示
                 <div className="text-center py-8 text-gray-500">
                   「{searchQuery}」に一致するポケモンが見つかりませんでした
                 </div>
@@ -206,7 +224,7 @@ export function ModernPokedex() {
                       isSelected={selectedPokemonUrl === pokemon.url}
                     />
                   ))}
-                  {/* もっと読み込むボタン */}
+                  {/* タスク2: もっと読み込むボタン */}
                   {pokemonList && pokemonList.results.length < 151 && !searchQuery && (
                     <div className="text-center pt-4">
                       <Button
