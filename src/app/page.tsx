@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { Button } from "../components/ui/button";
 import { PokemonListItem } from "../components/PokemonListItem";
 import { PokemonHeroDisplay } from "../components/PokemonHeroDisplay";
+import { SearchModal } from "../components/SearchModal";
+import { useSearch } from "@/contexts/SearchContext";
 import { pokemonService, type PokemonDetailWithJapanese } from "@/services/pokemonService";
 import type { PokemonListResponse } from "@/api/pokemon.api";
 import { Loader2 } from "lucide-react";
@@ -13,9 +16,35 @@ export function ModernPokedex() {
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetailWithJapanese | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [pokemonNameCache, setPokemonNameCache] = useState<Map<string, string>>(new Map());
 
-  // 表示するポケモンリスト（検索機能を削除したので直接使用）
-  const filteredPokemon = pokemonList?.results || [];
+  // SearchContextから検索状態を取得
+  const { searchQuery, setSearchQuery, isModalOpen, closeModal, clearSearch } = useSearch();
+
+  // フィルタリング処理
+  const filteredPokemon = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return pokemonList?.results || [];
+    }
+
+    const normalizedQuery = searchQuery.toLowerCase().trim();
+
+    return pokemonList?.results.filter(pokemon => {
+      // 英語名での部分一致検索
+      if (pokemon.name.toLowerCase().includes(normalizedQuery)) {
+        return true;
+      }
+
+      // 日本語名での部分一致検索（キャッシュから）
+      const japaneseName = pokemonNameCache.get(pokemon.name);
+      if (japaneseName && japaneseName.includes(searchQuery)) {
+        return true;
+      }
+
+      return false;
+    }) || [];
+  }, [pokemonList, searchQuery, pokemonNameCache]);
 
   // 選択されているポケモンのURL
   const selectedPokemonUrl = selectedPokemon
@@ -58,10 +87,77 @@ export function ModernPokedex() {
     initialize();
   }, [handlePokemonSelect]);
 
+  // 日本語名キャッシュ構築
+  useEffect(() => {
+    const fetchJapaneseNames = async () => {
+      if (!pokemonList?.results) return;
+
+      const namesToFetch = pokemonList.results
+        .filter(p => !pokemonNameCache.has(p.name))
+        .slice(0, 10); // バッチで10件ずつ取得
+
+      for (const pokemon of namesToFetch) {
+        try {
+          const japaneseName = await pokemonService.getPokemonNameInJapanese(pokemon.name);
+          setPokemonNameCache(prev => new Map(prev).set(pokemon.name, japaneseName));
+        } catch {
+          console.error(`Failed to fetch Japanese name for ${pokemon.name}`);
+        }
+      }
+    };
+
+    fetchJapaneseNames();
+  }, [pokemonList, pokemonNameCache]);
+
+  // もっと見るボタンの処理
+  const loadMorePokemon = async () => {
+    if (!pokemonList) return;
+
+    try {
+      setIsLoadingMore(true);
+
+      // 現在のリスト件数をoffsetとして使用
+      const currentCount = pokemonList.results.length;
+
+      // 次の24件を取得
+      const newData = await pokemonService.getPokemonList(24, currentCount);
+
+      // 既存リストに新規データを追加
+      setPokemonList(prevList => ({
+        ...newData,
+        results: [...(prevList?.results || []), ...newData.results]
+      }));
+    } catch (error) {
+      console.error('追加ポケモンの取得に失敗しました:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // 検索ハンドラー
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, [setSearchQuery]);
+
+  // フィルタクリアハンドラー
+  const handleClearFilter = useCallback(() => {
+    clearSearch();
+  }, [clearSearch]);
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
-      {/* メインコンテンツ */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <>
+      {/* 検索モーダル */}
+      <SearchModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSearch={handleSearch}
+        onClearFilter={handleClearFilter}
+        hasActiveFilter={!!searchQuery}
+      />
+
+      <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
+        {/* メインコンテンツ */}
+        <div className="flex-1 flex flex-col overflow-hidden">
         {/* 上部: 選択中のポケモン表示 */}
         <div className="h-1/2 relative overflow-hidden">
           {isLoadingDetail ? (
@@ -95,6 +191,10 @@ export function ModernPokedex() {
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
                 </div>
+              ) : filteredPokemon.length === 0 && searchQuery ? (
+                <div className="text-center py-8 text-gray-500">
+                  「{searchQuery}」に一致するポケモンが見つかりませんでした
+                </div>
               ) : (
                 <>
                   {filteredPokemon.map((pokemon) => (
@@ -106,6 +206,25 @@ export function ModernPokedex() {
                       isSelected={selectedPokemonUrl === pokemon.url}
                     />
                   ))}
+                  {/* もっと読み込むボタン */}
+                  {pokemonList && pokemonList.results.length < 151 && !searchQuery && (
+                    <div className="text-center pt-4">
+                      <Button
+                        onClick={loadMorePokemon}
+                        disabled={isLoadingMore}
+                        className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-300"
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            読み込み中...
+                          </>
+                        ) : (
+                          'もっと見る'
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -113,7 +232,8 @@ export function ModernPokedex() {
         </div>
       </div>
 
-    </div>
+      </div>
+    </>
   );
 }
 
