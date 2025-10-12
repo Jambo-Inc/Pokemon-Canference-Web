@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 export function ModernPokedex() {
   const [pokemonList, setPokemonList] = useState<PokemonListResponse | null>(null);
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetailWithJapanese | null>(null);
-  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   // 表示するポケモンリスト（検索機能を削除したので直接使用）
